@@ -1,0 +1,56 @@
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+
+data = pd.read_csv('uber.csv')
+data = data.drop(['Unnamed: 0', 'key'], axis=1)
+data = data.dropna()
+
+
+lon1 = np.radians(data['pickup_longitude'])
+lon2 = np.radians(data['dropoff_longitude'])
+lat1 = np.radians(data['pickup_latitude'])
+lat2 = np.radians(data['dropoff_latitude'])
+
+a = np.sin((lat2-lat1)/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin((lon2-lon1)/2)**2
+data['Distance'] = 2 * 6371 * np.arcsin(np.sqrt(a))
+
+# Remove Outliers
+data = data[(data.Distance > 0) & (data.Distance <= 60) & (data.fare_amount > 0)]
+
+
+sns.heatmap(data[['Distance', 'fare_amount']].corr(), annot=True)
+plt.show()
+
+
+X = data[['Distance']]
+y = data['fare_amount']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+p1 = lr.predict(X_test)
+
+rf = RandomForestRegressor(n_estimators=100, random_state=0)
+rf.fit(X_train, y_train)
+p2 = rf.predict(X_test)
+
+print("Linear Regression")
+print("R2:", r2_score(y_test, p1))
+print("MAE:", mean_absolute_error(y_test, p1))
+print("RMSE:", np.sqrt(mean_squared_error(y_test, p1)))
+
+print("\nRandom Forest")
+print("R2:", r2_score(y_test, p2))
+print("MAE:", mean_absolute_error(y_test, p2))
+print("RMSE:", np.sqrt(mean_squared_error(y_test, p2)))
